@@ -1,4 +1,4 @@
-## Append Supported FlatGeobuf
+## Append Supported FlatGeobuf[Feature Branch/Fork]
 This repo is a fork of original flatgeobuf/flatgeobuf, which serves as a PoC for adding append support to flatgeobuf, while maintaning backward compatibility. 
 
 I implemented a version of FlatGeobuf that passes all existing tests while supporting a new appending feature. The index is still a packed Hilbert R-tree, which needs to be recalculated and rewritten for every cumulative append. To lessen the pain of rewriting the index, I moved it to the end of the file, so I don't overwrite existing features while writing the new index. My focus was on keeping it as a single file, but I think a sidecar file might work better in some scenarios.
