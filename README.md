@@ -1,3 +1,13 @@
+## Append Supported FlatGeobuf[Feature Branch/Fork]
+This repo is a fork of original flatgeobuf/flatgeobuf, which serves as a PoC for adding append support to flatgeobuf, while maintaning backward compatibility. 
+
+I implemented a version of FlatGeobuf that passes all existing tests while supporting a new appending feature. The index is still a packed Hilbert R-tree, which needs to be recalculated and rewritten for every cumulative append. To lessen the pain of rewriting the index, I moved it to the end of the file, so I don't overwrite existing features while writing the new index. My focus was on keeping it as a single file, but I think a sidecar file might work better in some scenarios.
+
+I maintain backward compatibility (i.e., we can read old files, even though the new file structure is different) by using FlatBuffers’ schema evolution property.
+
+The new version is not really meant to replace the old immutable version in any way. The scenario I imagine is that the file is written and appended in batches, while preserving querying abilities on new data until we hit a partition limit of sorts, at which point we make it immutable for increased query speed.
+<img width="2800" height="1321" alt="image" src="https://github.com/user-attachments/assets/061f9e0c-5d47-4be4-9068-e28f2dfd88dd" />
+
 # ![layout](logo.svg) FlatGeobuf
 
 [![CI](https://github.com/flatgeobuf/flatgeobuf/actions/workflows/test.yml/badge.svg)](https://github.com/flatgeobuf/flatgeobuf/actions/workflows/test.yml)

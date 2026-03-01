@@ -275,6 +275,12 @@ pub fn calc_extent(nodes: &[NodeItem]) -> NodeItem {
     })
 }
 
+pub fn calc_extent_from_prev(nodes: &[NodeItem], extent: &NodeItem) -> NodeItem {
+    nodes.iter().fold(extent.clone(), |mut a, b| {
+        a.expand(b);
+        a
+    })
+}
 /// Packed Hilbert R-Tree
 pub struct PackedRTree {
     extent: NodeItem,
@@ -285,7 +291,7 @@ pub struct PackedRTree {
 }
 
 impl PackedRTree {
-    pub const DEFAULT_NODE_SIZE: u16 = 16;
+    pub const DEFAULT_NODE_SIZE: u16 = 16; //16 originial
 
     fn init(&mut self, node_size: u16) -> Result<()> {
         assert!(node_size >= 2, "Node size must be at least 2");
@@ -427,6 +433,27 @@ impl PackedRTree {
         Ok(tree)
     }
 
+    pub fn nodes_from_buf(
+        data: impl Read,
+        num_items: usize,
+        node_size: u16,
+    ) -> Result<Vec<NodeItem>> {
+        let node_size = node_size.clamp(2, 65535);
+        let level_bounds = PackedRTree::generate_level_bounds(num_items, node_size);
+        let num_nodes = level_bounds
+            .first()
+            .expect("RTree has at least one level when node_size >= 2 and num_items > 0")
+            .end;
+        let mut tree = PackedRTree {
+            extent: NodeItem::create(0),
+            node_items: Vec::with_capacity(num_nodes),
+            num_leaf_nodes: num_items,
+            branching_factor: node_size,
+            level_bounds,
+        };
+        tree.read_data(data)?;
+        Ok(tree.node_items)
+    }
     #[cfg(feature = "http")]
     pub async fn from_http(
         client: &mut BufferedHttpRangeClient,
@@ -525,6 +552,7 @@ impl PackedRTree {
             let end = min(node_index + node_size as usize, level_bounds[level].end);
             let length = end - node_index;
             let node_items = read_node_items(data, index_base, node_index, length)?;
+            debug!("Node Items: {node_items:?}");
             // search through child nodes
             for pos in node_index..end {
                 let node_pos = pos - node_index;
@@ -532,6 +560,7 @@ impl PackedRTree {
                 if !bounds.intersects(node_item) {
                     continue;
                 }
+                debug!("Node Item: {node_item:?} {is_leaf_node}");
                 if is_leaf_node {
                     let index = pos - leaf_nodes_offset;
                     let offset = node_item.offset as usize;
